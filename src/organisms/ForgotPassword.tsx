@@ -1,29 +1,21 @@
-import { FormEvent, useRef, useState } from "react";
+import { FormEvent, useRef } from "react";
 import { Form, Button, Card, Alert } from "react-bootstrap";
-import { useAuth } from "../../contexts/AuthContext";
 import { Link } from "react-router-dom";
+import { AuthStatus, resetPasswordRequest } from "../atoms/auth";
+import { useAppDispatch, useAppSelector } from "../atoms/hooks";
 
 export function ForgotPassword() {
   const emailRef = useRef<HTMLInputElement>(null);
-  const { resetPassword } = useAuth();
-  const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
+  const appDispatch = useAppDispatch();
+  const status = useAppSelector((state) => state.auth.status);
 
-  async function handleSubmit(e: FormEvent<HTMLFormElement>): Promise<void> {
+  function handleSubmit(e: FormEvent<HTMLFormElement>): void {
     e.preventDefault();
-
-    try {
-      setMessage("");
-      setError("");
-      setLoading(true);
-      await resetPassword(emailRef.current!.value);
-      setMessage("Check your inbox to reset your password");
-    } catch {
-      setError("Failed to reset password");
+    const email = emailRef.current?.value;
+    if (!email) {
+      return;
     }
-
-    setLoading(false);
+    appDispatch(resetPasswordRequest(email));
   }
 
   return (
@@ -31,14 +23,16 @@ export function ForgotPassword() {
       <Card>
         <Card.Body>
           <h2 className="text-center mb-4">Password Reset</h2>
-          {error && <Alert variant="danger">{error}</Alert>}
-          {message && <Alert variant="success">{message}</Alert>}
           <Form onSubmit={handleSubmit}>
             <Form.Group className="mb-3" controlId="email">
               <Form.Label>Email</Form.Label>
               <Form.Control type="email" ref={emailRef} required />
             </Form.Group>
-            <Button disabled={loading} className="w-100" type="submit">
+            <Button
+              disabled={status === AuthStatus.Pending}
+              className="w-100"
+              type="submit"
+            >
               Reset Password
             </Button>
           </Form>

@@ -1,12 +1,12 @@
 import { Container } from "react-bootstrap";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "../contexts/AuthContext";
 import { Dashboard } from "./organisms/Dashboard";
 import { UpdateProfile } from "./organisms/UpdateProfile";
 import { Signup } from "./organisms/Signup";
 import { Login } from "./organisms/Login";
 import { ForgotPassword } from "./organisms/ForgotPassword";
 import { RequireAuth } from "./atoms/RequireAuth";
+import { Notifications } from "./molecules/Notifications";
 
 function App() {
   return (
@@ -16,7 +16,6 @@ function App() {
     >
       <div className="w-100" style={{ maxWidth: "400px" }}>
         <Router>
-          <AuthProvider>
             <Routes>
               <Route path="/signup" element={<Signup />} />
               <Route path="/login" element={<Login />} />
@@ -32,9 +31,10 @@ function App() {
                 </RequireAuth>
               }></Route>
             </Routes>
-          </AuthProvider>
         </Router>
       </div>
+
+      <Notifications/>
     </Container>
   );
 }
