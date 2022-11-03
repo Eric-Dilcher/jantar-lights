@@ -36,9 +36,15 @@ export function Notifications() {
     <ToastContainer position="top-end" className="p-3">
       {notifications.map((n) => {
         return (
-          <Toast bg={n.variant} onClose={() => onCloseClicked(n.id)}>
-            <Toast.Header><strong className="me-auto">{generateHeader(n.variant)}</strong></Toast.Header>
-            <Toast.Body>{n.message}</Toast.Body>
+          <Toast key={n.id} bg={n.variant} onClose={() => onCloseClicked(n.id)}>
+            <Toast.Header>
+              <strong className="me-auto">{generateHeader(n.variant)}</strong>
+            </Toast.Header>
+            <Toast.Body>
+              {typeof n.message === "string"
+                ? n.message
+                : n.message.map((m) => <span>{m}<br></br></span>)}
+            </Toast.Body>
           </Toast>
         );
       })}

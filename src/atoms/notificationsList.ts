@@ -4,7 +4,7 @@ import { of, EMPTY } from "rxjs";
 import { filter, mergeMap, delay, map } from "rxjs/operators";
 
 export interface NotificationData {
-  message: string;
+  message: string | string[];
   variant: "success" | "danger" | "warning" | "info";
   // If no id is provided, one will be generated.
   id?: string;

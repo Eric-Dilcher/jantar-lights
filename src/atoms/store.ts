@@ -1,11 +1,16 @@
 import { Action, combineReducers, configureStore } from "@reduxjs/toolkit";
 import { combineEpics, createEpicMiddleware } from "redux-observable";
-import { authEpic, authSlice, initializeAuth } from "./auth";
-import { notificationsListEpic, notificationsListSlice } from "./notificationsList";
+import { authEpic, authSlice } from "./auth";
+import { colorConfigEpic, colorConfigSlice } from "./colorConfig";
+import {
+  notificationsListEpic,
+  notificationsListSlice,
+} from "./notificationsList";
 
 const rootReducer = combineReducers({
   [authSlice.name]: authSlice.reducer,
-  [notificationsListSlice.name]: notificationsListSlice.reducer
+  [notificationsListSlice.name]: notificationsListSlice.reducer,
+  [colorConfigSlice.name]: colorConfigSlice.reducer,
 });
 
 export type RootState = ReturnType<typeof rootReducer>;
@@ -17,10 +22,8 @@ const epicMiddleware = createEpicMiddleware<Action, Action, RootState>();
 export const store = configureStore({
   reducer: rootReducer,
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware({ thunk: false }).concat(epicMiddleware),
+    getDefaultMiddleware({ thunk: false, serializableCheck: false }).concat(epicMiddleware),
 });
 
-initializeAuth(store.dispatch);
-
-const rootEpic = combineEpics(authEpic, notificationsListEpic);
+const rootEpic = combineEpics(colorConfigEpic, authEpic, notificationsListEpic);
 epicMiddleware.run(rootEpic);

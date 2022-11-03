@@ -1,13 +1,14 @@
-import { from, of, forkJoin } from "rxjs";
+import { from, of, forkJoin, Observable, OperatorFunction } from "rxjs";
 import {
   filter,
   switchMap,
   map,
   catchError,
   withLatestFrom,
+  startWith,
 } from "rxjs/operators";
-import { Action, createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { auth } from "./firebase";
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import app from "./firebase";
 import {
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
@@ -17,10 +18,14 @@ import {
   updateEmail,
   updatePassword,
   Unsubscribe,
+  getAuth,
 } from "firebase/auth";
 import { combineEpics, Epic } from "redux-observable";
 import { Dispatch } from "react";
+import { FirebaseError } from "firebase/app";
 import { addNotification, NotificationData } from "./notificationsList";
+
+const auth = getAuth(app);
 
 export enum AuthStatus {
   Ready,
@@ -40,8 +45,8 @@ export const authSlice = createSlice({
     status: AuthStatus.Ready,
   } as AuthState,
   reducers: {
-    _updateUser(state, action: PayloadAction<User | null>): void {
-      state.currentUser = action.payload;
+    _authPending(state): void {
+      state.status = AuthStatus.Pending;
     },
     _authResolution(
       state,
@@ -49,34 +54,29 @@ export const authSlice = createSlice({
     ): void {
       state.status = AuthStatus.Ready;
     },
+    /* This action should not be dispatched outside of this file */
+    updateUser(state, action: PayloadAction<User | null>): void {
+      state.currentUser = action.payload;
+    },
     loginRequest(
-      state,
+      _state,
       _action: PayloadAction<{ email: string; password: string }>
-    ): void {
-      state.status = AuthStatus.Pending;
-    },
+    ): void {},
     signupRequest(
-      state,
+      _state,
       _action: PayloadAction<{ email: string; password: string }>
-    ): void {
-      state.status = AuthStatus.Pending;
-    },
-    logoutRequest(state): void {
-      state.status = AuthStatus.Pending;
-    },
-    resetPasswordRequest(state, _action: PayloadAction<string>): void {
-      state.status = AuthStatus.Pending;
-    },
+    ): void {},
+    logoutRequest(_state): void {},
+    resetPasswordRequest(_state, _action: PayloadAction<string>): void {},
     accountUpdateRequest(
-      state,
+      _state,
       _action: PayloadAction<{ email?: string; password?: string }>
-    ): void {
-      state.status = AuthStatus.Pending;
-    },
+    ): void {},
   },
 });
 
 export const {
+  updateUser,
   loginRequest,
   signupRequest,
   logoutRequest,
@@ -84,7 +84,7 @@ export const {
   accountUpdateRequest,
 } = authSlice.actions;
 
-const { _updateUser, _authResolution } = authSlice.actions;
+const { _authResolution, _authPending } = authSlice.actions;
 
 const authResolutionEpic: Epic = (action$) =>
   action$.pipe(
@@ -93,15 +93,41 @@ const authResolutionEpic: Epic = (action$) =>
     map((action) => addNotification(action.payload!))
   );
 
+function triggerSimpleAuthNotifications(
+  errorMessagePrefix: string,
+  successMessage?: string
+): OperatorFunction<unknown, PayloadAction<NotificationData | undefined>> {
+  return (
+    source$: Observable<unknown>
+  ): Observable<PayloadAction<NotificationData | undefined>> => {
+    return source$.pipe(
+      map(() =>
+        _authResolution(
+          successMessage
+            ? { message: successMessage, variant: "success" }
+            : undefined
+        )
+      ),
+      startWith(_authPending()),
+      catchError((e: FirebaseError) => {
+        console.error(e);
+        return of(
+          _authResolution({
+            message: [errorMessagePrefix, `Error: ${e.code}`],
+            variant: "danger",
+          })
+        );
+      })
+    );
+  };
+}
+
 const loginRequestEpic: Epic = (action$) =>
   action$.pipe(
     filter(loginRequest.match),
     switchMap(({ payload: { email, password } }) =>
       from(signInWithEmailAndPassword(auth, email, password)).pipe(
-        map(() => _authResolution()),
-        catchError(() =>
-          of(_authResolution({ message: "Login failed", variant: "danger" }))
-        )
+        triggerSimpleAuthNotifications("Login failed")
       )
     )
   );
@@ -111,10 +137,7 @@ const signupRequestEpic: Epic = (action$) =>
     filter(signupRequest.match),
     switchMap(({ payload: { email, password } }) =>
       from(createUserWithEmailAndPassword(auth, email, password)).pipe(
-        map(() => _authResolution()),
-        catchError(() =>
-          of(_authResolution({ message: "Sign up failed", variant: "danger" }))
-        )
+        triggerSimpleAuthNotifications("Sign up failed")
       )
     )
   );
@@ -124,12 +147,7 @@ const logoutRequestEpic: Epic = (action$) =>
     filter(logoutRequest.match),
     switchMap(() =>
       from(signOut(auth)).pipe(
-        map(() =>
-          _authResolution({ message: "Logged out", variant: "success" })
-        ),
-        catchError(() =>
-          of(_authResolution({ message: "Logout failed", variant: "danger" }))
-        )
+        triggerSimpleAuthNotifications("Logout failed", "Logged out")
       )
     )
   );
@@ -139,28 +157,15 @@ const resetPasswordRequestEpic: Epic = (action$) =>
     filter(resetPasswordRequest.match),
     switchMap((action) =>
       from(sendPasswordResetEmail(auth, action.payload)).pipe(
-        map(() =>
-          _authResolution({
-            message: "Check your inbox to reset your password",
-            variant: "success",
-          })
-        ),
-        catchError(() =>
-          of(
-            _authResolution({
-              message: "Reset password failed",
-              variant: "danger",
-            })
-          )
+        triggerSimpleAuthNotifications(
+          "Reset password failed",
+          "Check your inbox to reset your password"
         )
       )
     )
   );
 
-const accountUpdateRequestEpic: Epic<Action, Action, { auth: AuthState }> = (
-  action$,
-  state$
-) =>
+const accountUpdateRequestEpic: Epic = (action$, state$) =>
   action$.pipe(
     filter(accountUpdateRequest.match),
     withLatestFrom(state$.pipe(map((state) => state.auth.currentUser))),
@@ -195,19 +200,20 @@ const accountUpdateRequestEpic: Epic<Action, Action, { auth: AuthState }> = (
                   variant: "success",
                 })
               ),
-              catchError(() =>
-                of(
+              catchError((e: FirebaseError) => {
+                console.error(e);
+                return of(
                   _authResolution({
-                    message: "Account update failed.",
+                    message: ["Account update failed", `Error: ${e.code}`],
                     variant: "danger",
                   })
-                )
-              )
+                );
+              })
             )
           : of(
               _authResolution({
-                message: "Account not updated. No new values provided.",
-                variant: "danger",
+                message: ["Account not updated", "No new values provided"],
+                variant: "info",
               })
             );
       }
@@ -227,6 +233,6 @@ export function initializeAuth(
   dispatch: Dispatch<PayloadAction<User | null>>
 ): Unsubscribe {
   return auth.onAuthStateChanged((user) => {
-    dispatch(_updateUser(user));
+    dispatch(updateUser(user));
   });
 }
