@@ -11,11 +11,14 @@ import { Notifications } from "./organisms/Notifications";
 import { ConfigureLights } from "./organisms/ConfigureLights/ConfigureLights";
 import { initializeAuth } from "./atoms/auth";
 import { store } from "./atoms/store";
+import { DragInfoContext, useDragInfo } from "./atoms/dragInfo";
+import { DragRectangle } from "./atoms/DragRectangle/DragRectangle";
 
 function App() {
   useEffect(() => {
     return initializeAuth(store.dispatch);
   }, []);
+  const dragInfo = useDragInfo()
 
   return (
     <Container
@@ -23,6 +26,7 @@ function App() {
       style={{ minHeight: "100vh" }}
     >
       <div className="w-100" style={{ maxWidth: "400px" }}>
+        <DragInfoContext.Provider value={dragInfo}>
         <Router>
             <Routes>
               <Route path="/signup" element={<Signup />} />
@@ -40,11 +44,15 @@ function App() {
               }></Route>
               <Route path="/configure-lights" element={
                 <RequireAuth>
-                  <ConfigureLights />
+                  <>
+                    <ConfigureLights />
+                    <DragRectangle />
+                  </>
                 </RequireAuth>
               }></Route>
             </Routes>
         </Router>
+        </DragInfoContext.Provider>
       </div>
 
       <Notifications/>

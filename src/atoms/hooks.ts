@@ -20,7 +20,7 @@ export const useOpenToggle = (
   const checkTabIndex = useCallback((el: HTMLElement) => {
     const tabIndex = el.getAttribute("tabindex");
     if (!tabIndex) {
-        el.setAttribute("tabindex", "-1");
+      el.setAttribute("tabindex", "-1");
     }
   }, []);
 
@@ -33,16 +33,18 @@ export const useOpenToggle = (
       };
       const toggledEl = toggledElementRef.current;
       if (toggledEl === null) {
-        console.log("toggledElementRef is not defined! Cannot auto-close toggled element on click.");
+        console.log(
+          "toggledElementRef is not defined! Cannot auto-close toggled element on click."
+        );
       }
       window.addEventListener("keydown", keypressListener, false);
       toggledEl && checkTabIndex(toggledEl);
       toggledEl?.addEventListener("blur", close, false);
       toggledEl?.focus();
-      
+
       return () => {
-          window.removeEventListener("keydown", keypressListener, false);
-          toggledEl?.removeEventListener("blur", close, false);
+        window.removeEventListener("keydown", keypressListener, false);
+        toggledEl?.removeEventListener("blur", close, false);
       };
     }
   }, [toggledElementRef, isOpen, close, checkTabIndex]);

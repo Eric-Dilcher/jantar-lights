@@ -26,7 +26,6 @@ export function ColorSelector({ color, onColorChange, size = "20px" }: Props) {
     <div
       style={{ width: size, height: size }}
       className={styles.colorSelector}
-      tabIndex={-1}
     >
       <div
         style={selectorStyles}
