@@ -1,4 +1,10 @@
-import { MutableRefObject, useCallback, useContext, useEffect, useState } from "react";
+import {
+  MutableRefObject,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import { TypedUseSelectorHook, useDispatch, useSelector } from "react-redux";
 import { Dimensions, doOverlap, DragInfoContext } from "./dragInfo";
 import { RootState, AppDispatch } from "./store";
@@ -43,6 +49,13 @@ export const useOpenToggle = (
   const close = useCallback(() => {
     setIsOpen(false);
   }, []);
+  const setIsOpenNextTurn = useCallback(
+    // call setIsOpen during the next turn of the event loop, so that
+    // if this function is called in response to a click, we don't immediately
+    // close when the click event is handled by subtreeClickListener
+    (isOpen: boolean) => window.setTimeout(() => setIsOpen(isOpen)),
+    []
+  );
   const subtreeClickListener = useCallback(
     (subtreeClicked: boolean) => {
       if (!subtreeClicked) {
@@ -51,6 +64,7 @@ export const useOpenToggle = (
     },
     [close]
   );
+  
   useOnSubtreeClicked(toggledElementRef, subtreeClickListener);
 
   useEffect(() => {
@@ -68,7 +82,7 @@ export const useOpenToggle = (
     }
   }, [isOpen, close]);
 
-  return [isOpen, setIsOpen];
+  return [isOpen, setIsOpenNextTurn];
 };
 
 export const useSelectElement = (

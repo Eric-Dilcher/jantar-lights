@@ -30,8 +30,6 @@ export function ColorSelector({
 
   function onClick(e: React.MouseEvent): void {
     if (!e.ctrlKey && !e.metaKey) {
-      // Prevent click event from closing the color picker immediately
-      e.stopPropagation();
       setIsColorPickerOpen(!isColorPickerOpen);
     }
   }

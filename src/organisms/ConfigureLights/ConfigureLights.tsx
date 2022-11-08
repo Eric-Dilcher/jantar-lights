@@ -78,8 +78,6 @@ export function ConfigureLights() {
   }
 
   function onSetMultipleColorsClicked(e: React.MouseEvent): void {
-    // stop click event from clearing the selection
-    e.stopPropagation();
     setIsGlobalColorPickerOpen(!isGlobalColorPickerOpen);
   }
 
@@ -131,7 +129,12 @@ export function ConfigureLights() {
             <DragRectangle />
           </div>
 
-          <div className={"mt-4"} ref={pickerAndTriggerRef}>
+          <div
+            className={"mt-4"}
+            ref={pickerAndTriggerRef}
+            // prevent clicks from clearing the selection
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               onClick={onSetMultipleColorsClicked}
               className="btn btn-primary w-100"
@@ -139,11 +142,7 @@ export function ConfigureLights() {
               {areAnySelected ? "Set selected lights" : "Set all lights"}
             </button>
             {isGlobalColorPickerOpen && (
-              <div
-                className={styles["lights__global-color-picker"]}
-                // prevent click event inside of the skect picker from clearing the selection
-                onClick={(e) => e.stopPropagation()}
-              >
+              <div className={styles["lights__global-color-picker"]}>
                 <SketchPicker
                   color={getFirstSelectedColor()}
                   onChange={(c) => onMultipleColorsChanged(c.rgb)}
