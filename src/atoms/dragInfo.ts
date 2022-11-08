@@ -1,75 +1,145 @@
-import { createContext, useCallback, useEffect, useState } from "react";
-import { throttle, isEqual } from "lodash-es";
+import { MutableRefObject, useEffect, useState, createContext } from "react";
+import {
+  of,
+  fromEvent,
+  filter,
+  switchMap,
+  startWith,
+  merge,
+  map,
+  scan,
+  Observable,
+  throttleTime,
+  distinctUntilChanged,
+} from "rxjs";
+import { isEqual } from "lodash-es";
 
-export type DragCoordinates = [[number, number], [number, number]];
+export type Dimensions = [x: number, y: number, width: number, height: number];
 
 export interface DragInfo {
-  coordinates: DragCoordinates;
+  dragValues: Dimensions;
   isDragging: boolean;
+  ctrlMetaKey: boolean;
 }
 
-const defaultCoordinates: DragCoordinates = [
-    [NaN, NaN],
-    [NaN, NaN],
-  ];
+export const notDraggingDragInfo: DragInfo = Object.freeze({
+  dragValues: [NaN, NaN, NaN, NaN],
+  isDragging: false,
+  ctrlMetaKey: false,
+} as DragInfo);
+/** [x, y] */
+type Coordinate = [number, number];
+/** [coordinate, ctrl or meta pressed] */
+type CoordinateAndKey = [Coordinate, boolean];
+/** [start, end, ctrl or meta pressed] */
+type DragCoordinatesAndKey = [Coordinate, Coordinate, boolean];
 
-export const useDragInfo = (): DragInfo => {
-  const [isMouseDown, setIsMouseDown] = useState(false);
-  const [[startCoord, endCoord], setStartEndCoordinates] =
-    useState<DragCoordinates>(defaultCoordinates);
-  const onMouseDown = useCallback((e: MouseEvent) => {
-    if (e.button === 0) {
-      setIsMouseDown(true);
-      setStartEndCoordinates([
-        [e.clientX, e.clientY],
-        [e.clientX, e.clientY],
-      ]);
-    }
-  }, []);
+const defaultCoordinates: DragCoordinatesAndKey = [
+  [NaN, NaN],
+  [NaN, NaN],
+  false,
+];
 
-  useEffect(() => {
-    window.addEventListener("mousedown", onMouseDown, false);
-    return () => window.removeEventListener("mousedown", onMouseDown, false);
-  }, [onMouseDown]);
+const DEFAULT_DRAG_DISTANCE = 3 as const;
+// 16 ms ~= 60fps
+const DEFAULT_THROTTLE_TIME = 16 as const;
 
-  useEffect(() => {
-    if (isMouseDown) {
-      const onMouseUp = (e: MouseEvent) => {
-        if (e.button === 0) {
-          setIsMouseDown(false);
-          setStartEndCoordinates([
-            [NaN, NaN],
-            [NaN, NaN],
-          ]);
-        }
-      };
+function getDragInfoObservable(
+  targetRef: MutableRefObject<HTMLElement | null>,
+  dragDistance: number = DEFAULT_DRAG_DISTANCE,
+  dragThrottle: number = DEFAULT_THROTTLE_TIME
+): Observable<DragInfo> {
+  const targetEl = targetRef.current;
+  if (!targetEl) {
+    throw new Error("targetRef is not defined!");
+  }
 
-      const onMouseMoveThrottled = throttle((e: MouseEvent) => {
-        setStartEndCoordinates([startCoord, [e.clientX, e.clientY]]);
-      }, 16);
+  const mouseDown$ = fromEvent<MouseEvent>(targetEl, "mousedown").pipe(
+    filter((e) => e.button === 0)
+  );
 
-      window.addEventListener("mouseup", onMouseUp, false);
-      window.addEventListener("mousemove", onMouseMoveThrottled, false);
-      return () => {
-        console.log("removing")
-        window.removeEventListener("mouseup", onMouseUp, false);
-        window.removeEventListener("mousemove", onMouseMoveThrottled, false);
-      };
-    }
-  }, [isMouseDown, startCoord]);
+  // listen to mouseup on the window object in order to properly
+  // stop dragging even if the mouse left the drag target. 
+  const mouseUp$ = fromEvent<MouseEvent>(window, "mouseup").pipe(
+    filter((e) => e.button === 0)
+  );
 
-  const isDragging = isMouseDown && !isEqual(startCoord, endCoord);
+  const mouseMove$ = fromEvent<MouseEvent>(targetEl, "mousemove");
 
+  const isMouseDown$ = merge(
+    mouseDown$.pipe(map(() => true)),
+    mouseUp$.pipe(map(() => false))
+  );
+
+  const dragCoord$ = isMouseDown$.pipe(
+    switchMap((isMouseDown) =>
+      isMouseDown
+        ? mouseMove$.pipe(
+            throttleTime(dragThrottle),
+            map(
+              (e): CoordinateAndKey => [
+                [e.clientX, e.clientY],
+                e.ctrlKey || e.metaKey,
+              ]
+            ),
+            scan((acc, coord): DragCoordinatesAndKey => {
+              if (acc === defaultCoordinates) {
+                return [coord[0], coord[0], coord[1]];
+              }
+              return [acc[0], coord[0], acc[2] || coord[1]];
+            }, defaultCoordinates)
+          )
+        : of(defaultCoordinates)
+    ),
+    startWith(defaultCoordinates)
+  );
+  return dragCoord$.pipe(
+    map((coords) => coordsToInfo(coords, dragDistance)),
+    distinctUntilChanged(isEqual)
+  );
+}
+
+function coordsToInfo(
+  [start, end, ctrlMetaKey]: DragCoordinatesAndKey,
+  dragDistance: number
+): DragInfo {
+  const isMouseDown = [...start, ...end].every((v) => isFinite(v));
+  if (!isMouseDown) {
+    return notDraggingDragInfo;
+  }
+  const x = Math.min(start[0], end[0]);
+  const y = Math.min(start[1], end[1]);
+  const width = Math.abs(start[0] - end[0]);
+  const height = Math.abs(start[1] - end[1]);
+  const isDragging = width >= dragDistance || height >= dragDistance;
+  if (!isDragging) {
+    return notDraggingDragInfo;
+  }
   return {
-    coordinates: isDragging ? [[...startCoord], [...endCoord]] : defaultCoordinates,
-    isDragging: isDragging,
+    isDragging: true,
+    dragValues: [x, y, width, height],
+    ctrlMetaKey,
   };
+}
+
+export const useDragInfo = (
+  targetRef: MutableRefObject<HTMLElement | null>
+): DragInfo => {
+  const [dragInfo, setDragInfo] = useState<DragInfo>(notDraggingDragInfo);
+  useEffect(() => {
+    const sub = getDragInfoObservable(targetRef).subscribe(setDragInfo);
+    return () => sub.unsubscribe();
+  }, [targetRef]);
+  return dragInfo;
 };
 
-export const DragInfoContext = createContext<DragInfo>({
-  coordinates: [
-    [NaN, NaN],
-    [NaN, NaN],
-  ],
-  isDragging: false,
-});
+export const DragInfoContext = createContext(notDraggingDragInfo)
+
+export function doOverlap(a: Dimensions, b: Dimensions): boolean {
+  return (
+    a[0] < b[0] + b[2] &&
+    a[0] + a[2] > b[0] &&
+    a[1] < b[1] + b[3] &&
+    a[1] + a[3] > b[1]
+  );
+}

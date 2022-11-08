@@ -20,6 +20,7 @@ import { updateUser } from "./auth";
 import { addNotification, NotificationData } from "./notificationsList";
 import { FirebaseError } from "firebase/app";
 import { getColorConfig, setColorConfig } from "./firestore";
+import { getUniformLightsConfig, LightsConfig } from "./lightsConfig";
 
 export type RGB = RGBColor;
 
@@ -29,19 +30,7 @@ export enum ColorConfigSyncState {
   Unsynced = "unsynced  ",
 }
 
-export type ColorConfig = [
-  [RGB, RGB, RGB],
-  [RGB, RGB, RGB, RGB, RGB, RGB, RGB],
-  [RGB, RGB, RGB, RGB, RGB, RGB, RGB, RGB, RGB],
-  [RGB, RGB, RGB, RGB, RGB, RGB, RGB, RGB, RGB],
-  [RGB, RGB, RGB, RGB, RGB, RGB, RGB, RGB, RGB, RGB, RGB],
-  [RGB, RGB, RGB, RGB, RGB, RGB, RGB, RGB, RGB, RGB, RGB],
-  [RGB, RGB, RGB, RGB, RGB, RGB, RGB, RGB, RGB, RGB, RGB],
-  [RGB, RGB, RGB, RGB, RGB, RGB, RGB, RGB, RGB],
-  [RGB, RGB, RGB, RGB, RGB, RGB, RGB, RGB, RGB],
-  [RGB, RGB, RGB, RGB, RGB, RGB, RGB],
-  [RGB, RGB, RGB]
-];
+export type ColorConfig = LightsConfig<RGB>;
 
 interface ColorConfigStateSyncedOrSyncing {
   colors: ColorConfig;
@@ -57,21 +46,7 @@ export type ColorConfigState =
   | ColorConfigStateSyncedOrSyncing
   | ColorConfigStateUnsynced;
 
-export function getSolidColorConfig(c: RGB): ColorConfig {
-  return [
-    [c, c, c],
-    [c, c, c, c, c, c, c],
-    [c, c, c, c, c, c, c, c, c],
-    [c, c, c, c, c, c, c, c, c],
-    [c, c, c, c, c, c, c, c, c, c, c],
-    [c, c, c, c, c, c, c, c, c, c, c],
-    [c, c, c, c, c, c, c, c, c, c, c],
-    [c, c, c, c, c, c, c, c, c],
-    [c, c, c, c, c, c, c, c, c],
-    [c, c, c, c, c, c, c],
-    [c, c, c],
-  ];
-}
+export const getSolidColorConfig = (c: RGB): ColorConfig => getUniformLightsConfig(c);
 
 export const colorConfigSlice = createSlice({
   name: "colorConfig",
