@@ -21,6 +21,7 @@ import { addNotification, NotificationData } from "./notificationsList";
 import { FirebaseError } from "firebase/app";
 import { getColorConfig, setColorConfig } from "./firestore";
 import { buildLightsConfig, LightsConfig } from "./lightsConfig";
+import { omit } from "lodash-es";
 
 export type RGB = RGBColor;
 
@@ -46,8 +47,9 @@ export type ColorConfigState =
   | ColorConfigStateSyncedOrSyncing
   | ColorConfigStateUnsynced;
 
-export const getSolidColorConfig = (c: RGB): ColorConfig =>
-  buildLightsConfig(() => c);
+export function stripAlpha(c: RGB): RGB {
+  return omit(c, "a");
+}
 
 export const colorConfigSlice = createSlice({
   name: "colorConfig",
@@ -126,7 +128,7 @@ const getStoredColorsEpic: Epic = (action$) =>
     map(([_, cur]): string => cur!.uid),
     switchMap((uid) =>
       from(
-        getColorConfig(uid, getSolidColorConfig({ r: 255, g: 0, b: 0 }))
+        getColorConfig(uid, buildLightsConfig(() => ({ r: 255, g: 0, b: 0 })))
       ).pipe(
         concatMap((config) =>
           of(undefined).pipe(

@@ -1,6 +1,6 @@
 import React, { forwardRef, MutableRefObject } from "react";
 import * as CSS from "csstype";
-import { RGB } from "../../atoms/colorConfig";
+import { RGB, stripAlpha } from "../../atoms/colorConfig";
 import styles from "./LightSelector.module.css";
 import { SketchPicker } from "react-color";
 import { useOpenToggle } from "../../atoms/hooks";
@@ -43,7 +43,7 @@ export const LightSelector = forwardRef<HTMLDivElement, Props>(
           <div className={styles.colorPicker}>
             <SketchPicker
               color={color}
-              onChange={(c) => onColorChange(c.rgb)}
+              onChange={(c) => onColorChange(stripAlpha(c.rgb))}
               disableAlpha={true}
             ></SketchPicker>
           </div>

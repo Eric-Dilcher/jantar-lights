@@ -13,6 +13,7 @@ import {
   setColorConfigRequest,
   ColorConfigSyncState,
   RGB,
+  stripAlpha,
 } from "../../atoms/colorConfig";
 import { LightSelector } from "../../molecules/LightSelector/LightSelector";
 import {
@@ -58,6 +59,7 @@ export function ConfigureLights() {
       },
     })
   );
+
   const lightsReferences = buildLightsConfig(() =>
     // eslint-disable-next-line react-hooks/rules-of-hooks
     useRef<HTMLDivElement | null>(null)
@@ -95,8 +97,8 @@ export function ConfigureLights() {
     useOpenToggle(pickerAndTriggerRef);
 
   // drag to select related
-  const dragTargetRef = useRef<HTMLDivElement | null>(null);
-  const dragInfo = useDragInfo(dragTargetRef);
+  const allLightsRef = useRef<HTMLDivElement | null>(null);
+  const dragInfo = useDragInfo(allLightsRef);
 
   useEffect(() => {
     if (dragInfo.isDragging) {
@@ -128,7 +130,7 @@ export function ConfigureLights() {
 
   // click to select related
 
-  const onSelectedChanged = useCallback(
+  const changeIsSelected = useCallback(
     (row: number, col: number, isSelected: boolean): void => {
       const [state, setState] = currentLightsStates[row][col];
       setState({ ...state, isSelected });
@@ -148,25 +150,24 @@ export function ConfigureLights() {
             false
           );
           if (targetClicked && (e.ctrlKey || e.metaKey)) {
-            onSelectedChanged(i, j, true);
+            changeIsSelected(i, j, true);
           } else if (!targetClicked && !(e.ctrlKey || e.metaKey)) {
-            onSelectedChanged(i, j, false);
+            changeIsSelected(i, j, false);
           }
         };
       });
       function onWindowClick(e: MouseEvent): void {
         iterateLightsConfig(clickHandlers, (handler) => handler(e));
       }
+      const el = allLightsRef.current!;
       // Add listener during the next turn of the event loop so that the click event
       // associated with finishing the drag event isn't captured.
-      setTimeout(() => window.addEventListener("click", onWindowClick, false));
+      setTimeout(() => el.addEventListener("click", onWindowClick, false));
       return () => {
-        setTimeout(() =>
-          window.removeEventListener("click", onWindowClick, false)
-        );
+        setTimeout(() => el.removeEventListener("click", onWindowClick, false));
       };
     }
-  }, [dragInfo, lightsReferences, onSelectedChanged]);
+  }, [dragInfo, lightsReferences, changeIsSelected]);
 
   // callbacks
   function onSingleColorChanged(row: number, col: number, color: RGB): void {
@@ -194,6 +195,12 @@ export function ConfigureLights() {
     );
   }
 
+  function onDiscardChangesClicked(): void {
+    iterateLightsConfig(currentLightsStates, ([state, setState], i, j) =>
+      setState({ ...state, color: colorConfig.colors?.[i][j] ?? state.color })
+    );
+  }
+
   return (
     <DragInfoContext.Provider value={dragInfo}>
       <Card>
@@ -201,12 +208,12 @@ export function ConfigureLights() {
           <h2 className="text-center mb-2">Configure Lights</h2>
           <p className="text-center mb-1">Click to set a single color</p>
           {platform !== Platform.Mobile && (
-            <p className="text-center mb-4">
+            <p className="text-center mb-1">
               {platform === Platform.MacOS ? "⌘+click" : "ctrl+click"} or drag
               to select.
             </p>
           )}
-          <div className={"p-3 " + styles.lights} ref={dragTargetRef}>
+          <div className={"mt-4 " + styles.lights} ref={allLightsRef}>
             {colorConfig.syncState !== ColorConfigSyncState.Unsynced &&
               currentLightsStates.map((row, i) => (
                 <div className={styles.lights__row} key={i}>
@@ -233,7 +240,7 @@ export function ConfigureLights() {
           >
             <button
               onClick={onSetMultipleColorsClicked}
-              className="btn btn-primary w-100"
+              className="btn btn-primary w-100 mb-2"
             >
               {areAnySelected ? "Set selected lights" : "Set all lights"}
             </button>
@@ -241,13 +248,25 @@ export function ConfigureLights() {
               <div className={styles["lights__global-color-picker"]}>
                 <SketchPicker
                   color={firstSelectedColor}
-                  onChange={(c) => onMultipleColorsChanged(c.rgb)}
+                  onChange={(c) => onMultipleColorsChanged(stripAlpha(c.rgb))}
                   disableAlpha={true}
                 ></SketchPicker>
               </div>
             )}
           </div>
+          <button
+            disabled={
+              colorConfig.syncState !== ColorConfigSyncState.Synced ||
+              !hasConfigChanged
+            }
+            className="btn btn-primary w-100"
+            onClick={onDiscardChangesClicked}
+          >
+            Discard Changes
+          </button>
+
           <hr></hr>
+
           <button
             disabled={
               colorConfig.syncState !== ColorConfigSyncState.Synced ||
