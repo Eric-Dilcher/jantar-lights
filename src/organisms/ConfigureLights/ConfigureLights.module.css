@@ -4,6 +4,9 @@
     flex-direction: column;
     align-items: center;
     gap: 10px;
+    cursor: crosshair;
+    padding: 2rem;
+    margin: -1rem;
 }
 
 .lights__row {

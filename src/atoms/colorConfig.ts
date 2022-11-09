@@ -129,8 +129,9 @@ const getStoredColorsEpic: Epic = (action$) =>
         getColorConfig(uid, getSolidColorConfig({ r: 255, g: 0, b: 0 }))
       ).pipe(
         concatMap((config) =>
-          of(_updateColorConfig(config)).pipe(
-            triggerSimpleSyncNotification("Error getting stored lights.")
+          of(undefined).pipe(
+            triggerSimpleSyncNotification("Error getting stored lights."),
+            startWith(_updateColorConfig(config))
           )
         )
       )
