@@ -128,15 +128,14 @@ export function ConfigureLights() {
 
   // click to select related
 
-  const onSelectedChanged = useCallback((
-    row: number,
-    col: number,
-    isSelected: boolean
-  ): void => {
-    const [state, setState] = currentLightsStates[row][col];
-    setState({ ...state, isSelected });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [...currentLightsStates.flat()])
+  const onSelectedChanged = useCallback(
+    (row: number, col: number, isSelected: boolean): void => {
+      const [state, setState] = currentLightsStates[row][col];
+      setState({ ...state, isSelected });
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [...currentLightsStates.flat()]
+  );
 
   useEffect(() => {
     if (!dragInfo.isDragging) {
@@ -162,7 +161,9 @@ export function ConfigureLights() {
       // associated with finishing the drag event isn't captured.
       setTimeout(() => window.addEventListener("click", onWindowClick, false));
       return () => {
-        setTimeout(() => window.removeEventListener("click", onWindowClick, false));
+        setTimeout(() =>
+          window.removeEventListener("click", onWindowClick, false)
+        );
       };
     }
   }, [dragInfo, lightsReferences, onSelectedChanged]);

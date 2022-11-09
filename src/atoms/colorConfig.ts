@@ -68,7 +68,9 @@ export const colorConfigSlice = createSlice({
     ): void {
       state.syncState = ColorConfigSyncState.Synced;
     },
-    _setColorConfig(_state, _action: PayloadAction<ColorConfig>): void {},
+    _setColorConfig(state, action: PayloadAction<ColorConfig>): void {
+      state.colors = action.payload;
+    },
     setColorConfigRequest(_state, _action: PayloadAction<ColorConfig>): void {},
   },
 });
