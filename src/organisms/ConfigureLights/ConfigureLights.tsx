@@ -209,7 +209,7 @@ export function ConfigureLights() {
           <p className="text-center mb-1">click to set a single color</p>
           <p className="text-center mb-1">
             {platform !== Platform.Mobile && (platform === Platform.MacOS ? "⌘+click or" : "ctrl+click or")} drag
-            to select.
+            to select
           </p>
           <div className={"mt-4 " + styles.lights} ref={allLightsRef}>
             {colorConfig.syncState !== ColorConfigSyncState.Unsynced &&
