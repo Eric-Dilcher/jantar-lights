@@ -206,13 +206,11 @@ export function ConfigureLights() {
       <Card>
         <Card.Body>
           <h2 className="text-center mb-2">Configure Lights</h2>
-          <p className="text-center mb-1">Click to set a single color</p>
-          {platform !== Platform.Mobile && (
-            <p className="text-center mb-1">
-              {platform === Platform.MacOS ? "⌘+click" : "ctrl+click"} or drag
-              to select.
-            </p>
-          )}
+          <p className="text-center mb-1">click to set a single color</p>
+          <p className="text-center mb-1">
+            {platform === Platform.MacOS ? "⌘+click or" : "ctrl+click or"} drag
+            to select.
+          </p>
           <div className={"mt-4 " + styles.lights} ref={allLightsRef}>
             {colorConfig.syncState !== ColorConfigSyncState.Unsynced &&
               currentLightsStates.map((row, i) => (

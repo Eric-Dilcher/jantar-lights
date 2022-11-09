@@ -41,8 +41,7 @@ const defaultCoordinates: DragCoordinatesAndKey = [
 ];
 
 const DEFAULT_DRAG_DISTANCE = 3 as const;
-// 16 ms ~= 60fps
-const DEFAULT_THROTTLE_TIME = 16 as const;
+const DEFAULT_THROTTLE_TIME = 16 as const; // 16 ms ~= 60fps
 
 function getDragInfoObservable(
   targetRef: MutableRefObject<HTMLElement | null>,
@@ -54,17 +53,19 @@ function getDragInfoObservable(
     throw new Error("targetRef is not defined!");
   }
 
-  const mouseDown$ = fromEvent<MouseEvent>(targetEl, "mousedown").pipe(
-    filter((e) => e.button === 0)
+  const mouseDown$ = fromEvent<PointerEvent>(targetEl, "pointerdown").pipe(
+    filter((e) => e.button === 0 && e.isPrimary)
   );
 
   // listen to mouseup on the window object in order to properly
   // stop dragging even if the mouse left the drag target. 
-  const mouseUp$ = fromEvent<MouseEvent>(window, "mouseup").pipe(
-    filter((e) => e.button === 0)
+  const mouseUp$ = fromEvent<PointerEvent>(window, "pointerup").pipe(
+    filter((e) => e.button === 0 && e.isPrimary)
   );
 
-  const mouseMove$ = fromEvent<MouseEvent>(targetEl, "mousemove");
+  const mouseMove$ = fromEvent<PointerEvent>(targetEl, "pointermove").pipe(
+    filter((e) => e.isPrimary)
+  );
 
   const isMouseDown$ = merge(
     mouseDown$.pipe(map(() => true)),

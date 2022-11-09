@@ -7,6 +7,7 @@
     cursor: crosshair;
     padding: 2rem;
     margin: -1rem;
+    touch-action: none;
 }
 
 .lights__row {
