@@ -33,7 +33,7 @@ export function Notifications() {
   }
 
   return (
-    <ToastContainer position="top-end" className="p-3">
+    <ToastContainer position="top-end" containerPosition="position-fixed" className="p-3">
       {notifications.map((n) => {
         return (
           <Toast key={n.id} bg={n.variant} onClose={() => onCloseClicked(n.id)}>
