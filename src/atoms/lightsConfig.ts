@@ -11,96 +11,45 @@ export type LightsConfig<T> = [
   [T, T, T, T, T, T, T],
   [T, T, T]
 ];
-
+const u = undefined;
 export const lightsTemplate: LightsConfig<undefined> = [
-  [undefined, undefined, undefined],
-  [undefined, undefined, undefined, undefined, undefined, undefined, undefined],
-  [
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-  ],
-  [
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-  ],
-  [
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-  ],
-  [
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-  ],
-  [
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-  ],
-  [
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-  ],
-  [
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-  ],
-  [undefined, undefined, undefined, undefined, undefined, undefined, undefined],
-  [undefined, undefined, undefined],
+  [u, u, u],
+  [u, u, u, u, u, u, u],
+  [u, u, u, u, u, u, u, u, u],
+  [u, u, u, u, u, u, u, u, u],
+  [u, u, u, u, u, u, u, u, u, u, u],
+  [u, u, u, u, u, u, u, u, u, u, u],
+  [u, u, u, u, u, u, u, u, u, u, u],
+  [u, u, u, u, u, u, u, u, u],
+  [u, u, u, u, u, u, u, u, u],
+  [u, u, u, u, u, u, u],
+  [u, u, u],
 ];
-export function getUniformLightsConfig<T>(v: T): LightsConfig<T> {
-  return lightsTemplate.map((row) => row.map(() => v)) as LightsConfig<T>;
+export function buildLightsConfig<T>(
+  gen: (row: number, col: number) => T
+): LightsConfig<T> {
+  return lightsTemplate.map((row, i) =>
+    row.map((_, j) => gen(i, j))
+  ) as LightsConfig<T>;
+}
+
+/** return false from callback to break early */
+export function iterateLightsConfig<T>(
+  config: LightsConfig<T>,
+  clb: (val: T, row: number, col: number) => void | boolean
+): void {
+  for (const [i, row] of config.entries()) {
+    for (const [j, val] of row.entries()) {
+      if (clb(val, i, j) === false) {
+        return;
+      }
+    }
+  }
+}
+
+export function mapLightsConfig<T, U>(
+  config: LightsConfig<T>,
+  mapFn: (val: T, row: number, col: number) => U
+): LightsConfig<U> {
+  return buildLightsConfig((i, j) => mapFn(config[i][j], i, j));
 }

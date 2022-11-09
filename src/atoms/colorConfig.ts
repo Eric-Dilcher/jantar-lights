@@ -20,7 +20,7 @@ import { updateUser } from "./auth";
 import { addNotification, NotificationData } from "./notificationsList";
 import { FirebaseError } from "firebase/app";
 import { getColorConfig, setColorConfig } from "./firestore";
-import { getUniformLightsConfig, LightsConfig } from "./lightsConfig";
+import { buildLightsConfig, LightsConfig } from "./lightsConfig";
 
 export type RGB = RGBColor;
 
@@ -46,7 +46,8 @@ export type ColorConfigState =
   | ColorConfigStateSyncedOrSyncing
   | ColorConfigStateUnsynced;
 
-export const getSolidColorConfig = (c: RGB): ColorConfig => getUniformLightsConfig(c);
+export const getSolidColorConfig = (c: RGB): ColorConfig =>
+  buildLightsConfig(() => c);
 
 export const colorConfigSlice = createSlice({
   name: "colorConfig",

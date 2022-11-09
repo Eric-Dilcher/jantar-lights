@@ -1,128 +1,223 @@
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { SketchPicker } from "react-color";
 import { Link } from "react-router-dom";
 import { Card } from "react-bootstrap";
-import { cloneDeep, isEqual } from "lodash-es";
+import { isEqual } from "lodash-es";
 import {
   setColorConfigRequest,
-  getSolidColorConfig,
-  RGB,
   ColorConfigSyncState,
-  ColorConfig,
+  RGB,
 } from "../../atoms/colorConfig";
-import { ColorSelector } from "../../molecules/ColorSelector/ColorSelector";
+import { LightSelector } from "../../molecules/LightSelector/LightSelector";
 import {
+  Platform,
   useAppDispatch,
   useAppSelector,
   useOpenToggle,
+  usePlatform,
 } from "../../atoms/hooks";
 import styles from "./ConfigureLights.module.css";
-import { getUniformLightsConfig, LightsConfig } from "../../atoms/lightsConfig";
+import {
+  buildLightsConfig,
+  iterateLightsConfig,
+  mapLightsConfig,
+} from "../../atoms/lightsConfig";
 import { DragRectangle } from "../../atoms/DragRectangle/DragRectangle";
 import {
-  DragInfoContext,
+  Dimensions,
+  doOverlap,
   useDragInfo,
-  notDraggingDragInfo,
+  DragInfoContext,
 } from "../../atoms/dragInfo";
 
+interface LightState {
+  isSelected: boolean;
+  color: RGB;
+}
+
 export function ConfigureLights() {
+  const platform = usePlatform();
   const colorConfig = useAppSelector((state) => state.colorConfig);
   const appDispatch = useAppDispatch();
-  const currentlySelectedRef = useRef<LightsConfig<boolean>>(
-    getUniformLightsConfig(false)
-  );
-  const [currentColorsLocal, setCurrentColorsLocal] = useState<ColorConfig>(
-    colorConfig.colors ??
-      getSolidColorConfig({
+
+  // Light config related
+  const currentLightsStates = buildLightsConfig((i, j) =>
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    useState<LightState>({
+      isSelected: false,
+      color: colorConfig.colors?.[i][j] || {
         r: 255,
         g: 0,
         b: 0,
-      })
+      },
+    })
   );
-  const areAnySelected = currentlySelectedRef.current.flat().some((v) => v);
+  const lightsReferences = buildLightsConfig(() =>
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    useRef<HTMLDivElement | null>(null)
+  );
+  const areAnySelected = useMemo(
+    (): boolean =>
+      currentLightsStates.flat().some(([state]) => state.isSelected),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [...currentLightsStates.flat()]
+  );
   const hasConfigChanged = useMemo(
-    (): boolean => !isEqual(colorConfig.colors, currentColorsLocal),
-    [colorConfig, currentColorsLocal]
+    (): boolean =>
+      !isEqual(
+        colorConfig.colors,
+        mapLightsConfig(currentLightsStates, ([state]) => state.color)
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [colorConfig, ...currentLightsStates.flat()]
   );
+  const firstSelectedColor = useMemo((): RGB => {
+    let color = currentLightsStates[0][0][0].color;
+    iterateLightsConfig(currentLightsStates, ([state]) => {
+      if (state.isSelected) {
+        color = state.color;
+        return false;
+      }
+    });
+    return color;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [...currentLightsStates.flat()]);
+
+  // multiple color picker related
   const pickerAndTriggerRef = useRef<HTMLDivElement | null>(null);
-  const [isGlobalColorPickerOpen, setIsGlobalColorPickerOpen] =
+  const [isMultipleColorPickerOpen, setIsMultipleColorPickerOpen] =
     useOpenToggle(pickerAndTriggerRef);
+
+  // drag to select related
   const dragTargetRef = useRef<HTMLDivElement | null>(null);
   const dragInfo = useDragInfo(dragTargetRef);
-  const getFirstSelectedColor = useCallback((): RGB => {
-    const selected = currentlySelectedRef.current;
-    for (const [i, row] of selected.entries()) {
-      for (const [j, isSelected] of row.entries()) {
-        if (isSelected) {
-          return currentColorsLocal[i][j];
-        }
+
+  useEffect(() => {
+    if (dragInfo.isDragging) {
+      function isOverlapped(row: number, col: number): boolean {
+        const elRect =
+          lightsReferences[row][col].current!.getBoundingClientRect();
+        const elDims: Dimensions = [
+          elRect.x,
+          elRect.y,
+          elRect.width,
+          elRect.height,
+        ];
+        return doOverlap(dragInfo.dragValues, elDims);
       }
+
+      iterateLightsConfig(currentLightsStates, ([state, setState], i, j) => {
+        const overlapped = isOverlapped(i, j);
+        setState({
+          ...state,
+          isSelected: !dragInfo.ctrlMetaKey
+            ? overlapped
+            : overlapped || state.isSelected,
+        });
+      });
     }
-    console.log(currentlySelectedRef.current);
-    console.log(currentColorsLocal[0][0]);
-    return currentColorsLocal[0][0];
-  }, [currentColorsLocal]);
+    // Need to only react to the draginfo.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dragInfo]);
 
-  function onColorChanged(row: number, col: number, color: RGB): void {
-    const newConfig = cloneDeep(currentColorsLocal);
-    newConfig[row][col] = color;
-    setCurrentColorsLocal(newConfig);
-  }
+  // click to select related
 
-  function onSelectedChanged(
+  const onSelectedChanged = useCallback((
     row: number,
     col: number,
-    selected: boolean
-  ): void {
-    currentlySelectedRef.current[row][col] = selected;
-  }
+    isSelected: boolean
+  ): void => {
+    const [state, setState] = currentLightsStates[row][col];
+    setState({ ...state, isSelected });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [...currentLightsStates.flat()])
 
-  function onSetMultipleColorsClicked(e: React.MouseEvent): void {
-    setIsGlobalColorPickerOpen(!isGlobalColorPickerOpen);
+  useEffect(() => {
+    if (!dragInfo.isDragging) {
+      const clickHandlers = mapLightsConfig(lightsReferences, (ref, i, j) => {
+        return (e: MouseEvent) => {
+          const targetEl = ref.current;
+          const targets = e.composedPath();
+          const targetClicked = targets.reduce(
+            (prev, target) => prev || target === targetEl,
+            false
+          );
+          if (targetClicked && (e.ctrlKey || e.metaKey)) {
+            onSelectedChanged(i, j, true);
+          } else if (!targetClicked && !(e.ctrlKey || e.metaKey)) {
+            onSelectedChanged(i, j, false);
+          }
+        };
+      });
+      function onWindowClick(e: MouseEvent): void {
+        iterateLightsConfig(clickHandlers, (handler) => handler(e));
+      }
+      // Add listener during the next turn of the event loop so that the click event
+      // associated with finishing the drag event isn't captured.
+      setTimeout(() => window.addEventListener("click", onWindowClick, false));
+      return () => {
+        setTimeout(() => window.removeEventListener("click", onWindowClick, false));
+      };
+    }
+  }, [dragInfo, lightsReferences, onSelectedChanged]);
+
+  // callbacks
+  function onSingleColorChanged(row: number, col: number, color: RGB): void {
+    const [state, setState] = currentLightsStates[row][col];
+    setState({ ...state, color });
   }
 
   function onMultipleColorsChanged(color: RGB): void {
-    if (!areAnySelected) {
-      setCurrentColorsLocal(getSolidColorConfig(color));
-    }
-    setCurrentColorsLocal((currentColors): ColorConfig => {
-      const newConfig = cloneDeep(currentColors);
-      const selected = currentlySelectedRef.current;
-      selected.forEach((row, i) =>
-        row.forEach((isSelected, j) => {
-          if (isSelected) {
-            newConfig[i][j] = color;
-          }
-        })
-      );
-      return newConfig;
+    iterateLightsConfig(currentLightsStates, ([state, setState]) => {
+      if (state.isSelected || !areAnySelected) {
+        setState({ ...state, color });
+      }
     });
   }
 
-  function setColors(): void {
-    appDispatch(setColorConfigRequest(currentColorsLocal));
+  function onSetMultipleColorsClicked(): void {
+    setIsMultipleColorPickerOpen(!isMultipleColorPickerOpen);
+  }
+
+  function onSetColorsClicked(): void {
+    appDispatch(
+      setColorConfigRequest(
+        mapLightsConfig(currentLightsStates, ([state]) => state.color)
+      )
+    );
   }
 
   return (
-    <DragInfoContext.Provider
-      // Prevent dragging to select lights underneath the color picker
-      value={isGlobalColorPickerOpen ? notDraggingDragInfo : dragInfo}
-    >
+    <DragInfoContext.Provider value={dragInfo}>
       <Card>
         <Card.Body>
-          <h2 className="text-center mb-4">Configure Lights</h2>
+          <h2 className="text-center mb-2">Configure Lights</h2>
+          <p className="text-center mb-1">Click to set a single color</p>
+          {platform !== Platform.Mobile && (
+            <p className="text-center mb-4">
+              {platform === Platform.MacOS ? "⌘+click" : "ctrl+click"} or drag
+              to select.
+            </p>
+          )}
           <div className={"p-3 " + styles.lights} ref={dragTargetRef}>
             {colorConfig.syncState !== ColorConfigSyncState.Unsynced &&
-              currentColorsLocal.map((row, i) => (
+              currentLightsStates.map((row, i) => (
                 <div className={styles.lights__row} key={i}>
-                  {row.map((color, j) => (
-                    <ColorSelector
+                  {row.map(([{ isSelected, color }], j) => (
+                    <LightSelector
                       size={"20px"}
                       key={j}
                       color={color}
-                      onColorChange={(c) => onColorChanged(i, j, c)}
-                      onSelectedChange={(v) => onSelectedChanged(i, j, v)}
-                    ></ColorSelector>
+                      onColorChange={(c) => onSingleColorChanged(i, j, c)}
+                      selected={isSelected}
+                      ref={lightsReferences[i][j]}
+                    ></LightSelector>
                   ))}
                 </div>
               ))}
@@ -141,10 +236,10 @@ export function ConfigureLights() {
             >
               {areAnySelected ? "Set selected lights" : "Set all lights"}
             </button>
-            {isGlobalColorPickerOpen && (
+            {isMultipleColorPickerOpen && (
               <div className={styles["lights__global-color-picker"]}>
                 <SketchPicker
-                  color={getFirstSelectedColor()}
+                  color={firstSelectedColor}
                   onChange={(c) => onMultipleColorsChanged(c.rgb)}
                   disableAlpha={true}
                 ></SketchPicker>
@@ -158,7 +253,7 @@ export function ConfigureLights() {
               !hasConfigChanged
             }
             className="btn btn-primary w-100 mb-3"
-            onClick={setColors}
+            onClick={onSetColorsClicked}
           >
             Apply Changes
           </button>
