@@ -208,7 +208,7 @@ export function ConfigureLights() {
           <h2 className="text-center mb-2">Configure Lights</h2>
           <p className="text-center mb-1">click to set a single color</p>
           <p className="text-center mb-1">
-            {platform === Platform.MacOS ? "⌘+click or" : "ctrl+click or"} drag
+            {platform !== Platform.Mobile && (platform === Platform.MacOS ? "⌘+click or" : "ctrl+click or")} drag
             to select.
           </p>
           <div className={"mt-4 " + styles.lights} ref={allLightsRef}>
