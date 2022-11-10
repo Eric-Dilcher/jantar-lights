@@ -1,5 +1,5 @@
 import { useContext } from "react";
-import { DragInfoContext } from "../dragInfo";
+import { DragInfoContext } from "./dragInfo";
 import styles from "./DragRectangle.module.css";
 
 

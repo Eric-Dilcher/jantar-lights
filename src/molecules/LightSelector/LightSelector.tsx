@@ -1,9 +1,9 @@
-import React, { forwardRef, MutableRefObject } from "react";
+import React, { forwardRef, MutableRefObject, useRef } from "react";
 import * as CSS from "csstype";
 import { RGB, stripAlpha } from "../../atoms/colorConfig";
 import styles from "./LightSelector.module.css";
 import { SketchPicker } from "react-color";
-import { useOpenToggle } from "../../atoms/hooks";
+import { useMoveIntoView, useOpenToggle } from "../../atoms/hooks";
 
 type Props = {
   color: RGB;
@@ -14,8 +14,10 @@ type Props = {
 
 export const LightSelector = forwardRef<HTMLDivElement, Props>(
   ({ color, onColorChange, selected, size = "20px" }: Props, ref) => {
+    const pickerRef = useRef<HTMLDivElement | null>(null);
     const [isColorPickerOpen, setIsColorPickerOpen] =
-      useOpenToggle(ref as MutableRefObject<HTMLDivElement>);
+      useOpenToggle(pickerRef as MutableRefObject<HTMLDivElement>);
+    useMoveIntoView(pickerRef, isColorPickerOpen)
 
     const selectorStyles: CSS.Properties = {
       backgroundColor: `rgb(${color.r}, ${color.g}, ${color.b})`,
@@ -40,7 +42,7 @@ export const LightSelector = forwardRef<HTMLDivElement, Props>(
           onClick={onClick}
         ></div>
         {isColorPickerOpen && (
-          <div className={styles.colorPicker}>
+          <div className={styles.colorPicker} ref={pickerRef}>
             <SketchPicker
               color={color}
               onChange={(c) => onColorChange(stripAlpha(c.rgb))}

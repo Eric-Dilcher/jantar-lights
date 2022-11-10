@@ -10,14 +10,15 @@
     touch-action: none;
 }
 
-.lights__row {
+.lights_row {
     display: flex;
     gap: 10px;
 }
 
-.lights__global-color-picker {
+.color_picker {
     position: absolute;
     z-index: 1;
-    bottom: 0;
-    left: 0;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
 }

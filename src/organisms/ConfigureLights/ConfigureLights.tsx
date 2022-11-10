@@ -29,13 +29,13 @@ import {
   iterateLightsConfig,
   mapLightsConfig,
 } from "../../atoms/lightsConfig";
-import { DragRectangle } from "../../atoms/DragRectangle/DragRectangle";
+import { DragRectangle } from "../../atoms/Drag/DragRectangle";
 import {
   Dimensions,
   doOverlap,
   useDragInfo,
   DragInfoContext,
-} from "../../atoms/dragInfo";
+} from "../../atoms/Drag/dragInfo";
 
 interface LightState {
   isSelected: boolean;
@@ -214,7 +214,7 @@ export function ConfigureLights() {
           <div className={"mt-4 " + styles.lights} ref={allLightsRef}>
             {colorConfig.syncState !== ColorConfigSyncState.Unsynced &&
               currentLightsStates.map((row, i) => (
-                <div className={styles.lights__row} key={i}>
+                <div className={styles.lights_row} key={i}>
                   {row.map(([{ isSelected, color }], j) => (
                     <LightSelector
                       size={"20px"}
@@ -243,7 +243,7 @@ export function ConfigureLights() {
               {areAnySelected ? "Set selected lights" : "Set all lights"}
             </button>
             {isMultipleColorPickerOpen && (
-              <div className={styles["lights__global-color-picker"]}>
+              <div className={styles.color_picker}>
                 <SketchPicker
                   color={firstSelectedColor}
                   onChange={(c) => onMultipleColorsChanged(stripAlpha(c.rgb))}

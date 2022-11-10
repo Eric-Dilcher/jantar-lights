@@ -1,7 +1,15 @@
-import { RefObject, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  MutableRefObject,
+  RefObject,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { TypedUseSelectorHook, useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "./store";
 import { UAParser } from "ua-parser-js";
+import { debounce } from "lodash-es";
 
 export const useAppDispatch = () => useDispatch<AppDispatch>();
 export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
@@ -98,4 +106,51 @@ export const usePlatform = (): Platform => {
     }
     return Platform.Other;
   }, [parser]);
+};
+
+export const useMoveIntoView = (
+  ref: MutableRefObject<HTMLElement | null>,
+  enabled: boolean,
+  padding = 5 // padding in px
+): void => {
+  const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
+  useEffect(() => {
+    function calculateAndSetViewportSize(): void {
+      const root = document.querySelector(":root")!;
+      setViewportSize({ width: root.clientWidth, height: root.clientHeight });
+    }
+    calculateAndSetViewportSize();
+    const debounced = debounce(calculateAndSetViewportSize, 300);
+    window.addEventListener("resize", debounced, { passive: true });
+    return () => window.removeEventListener("resize", debounced);
+  }, []);
+
+  useEffect(() => {
+    if (enabled) {
+      const el = ref.current!;
+      const rect = el.getBoundingClientRect();
+
+      const leftOverlap = Math.min(0, rect.left - padding);
+      const rightOverlap = Math.min(
+        0,
+        viewportSize.width - padding - rect.right
+      );
+      if (leftOverlap < 0) {
+        el.style.transform += ` translateX(${Math.abs(leftOverlap)}px)`;
+      } else if (rightOverlap < 0) {
+        el.style.transform += ` translateX(${rightOverlap}px)`;
+      }
+
+      const topOverlap = Math.min(0, rect.top - padding);
+      const bottomOverlap = Math.min(
+        0,
+        viewportSize.height - padding - rect.bottom
+      );
+      if (topOverlap < 0) {
+        el.style.transform = ` translateY(${Math.abs(topOverlap)}px)`;
+      } else if (bottomOverlap < 0) {
+        el.style.transform += ` translateY(${bottomOverlap}px)`;
+      }
+    }
+  }, [ref, enabled, padding, viewportSize]);
 };
