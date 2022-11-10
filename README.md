@@ -1,3 +1,23 @@
+# Jantar Lights
+I created this project as motivation and an opportunity to learn React, Redux, redux-observable, and Firebase.
+
+See this project in action at https://jantar-lights.vercel.app/. Feel free to create an account, and then click "Configure Lights" to see it in action.
+
+## Motivation
+The housing block I live in has an art installation on the wall - a circular grid of LED lights, which can be set to any color.
+
+I hope that in the future, inhabitants of my housing block can submit their own designs to be displayed on the side of our home using this app.
+
+## Notable features
+- Fully typed in TypeScript
+- [Auth](src/atoms/auth.ts) using Firebase
+- [Persistence](src/atoms/firestore.ts) using Firestore
+- [Drag to select](src/atoms/Drag) implemented on both desktop and mobile.
+- [Global state](src/atoms/store.ts) powered by redux.
+- Redux-observable used to power complex reactive behavior like
+    - trigerring data [fetch](src/atoms/colorConfig.ts#L121) and [push](src/atoms/colorConfig.ts#L154)
+    - emitting [success and error toasts](src/atoms/notificationsList.ts#L51)
+
 # Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
