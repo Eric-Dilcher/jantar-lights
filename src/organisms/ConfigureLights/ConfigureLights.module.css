@@ -8,6 +8,8 @@
     padding: 2rem;
     margin: -1rem;
     touch-action: none;
+    /* This gives touch users a corner to grab and scroll */
+    border-radius: 25%;
 }
 
 .lights_row {
