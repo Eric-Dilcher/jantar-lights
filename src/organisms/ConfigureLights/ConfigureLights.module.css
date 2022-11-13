@@ -1,27 +1,32 @@
 .lights {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-    cursor: crosshair;
-    padding: 2rem;
-    margin: -1rem;
-    touch-action: none;
-    /* This gives touch users a corner to grab and scroll */
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  cursor: crosshair;
+  padding: 2rem;
+  margin: -1rem;
+  touch-action: none;
+}
+
+@media only screen and (max-width: 440px) {
+  .lights {
+    /* This gives touch users a corner to grab and scroll if there's no space aound to grab */
     border-radius: 25%;
+  }
 }
 
 .lights_row {
-    display: flex;
-    gap: 10px;
+  display: flex;
+  gap: 10px;
 }
 
 .color_picker {
-    position: absolute;
-    z-index: 1;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    touch-action: none;
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  touch-action: none;
 }

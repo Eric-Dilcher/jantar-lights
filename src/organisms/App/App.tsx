@@ -1,16 +1,17 @@
 import { useEffect } from "react";
 import { Container } from "react-bootstrap";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { Dashboard } from "./organisms/Dashboard";
-import { UpdateProfile } from "./organisms/UpdateProfile";
-import { Signup } from "./organisms/Signup";
-import { Login } from "./organisms/Login";
-import { ForgotPassword } from "./organisms/ForgotPassword";
-import { RequireAuth } from "./atoms/RequireAuth";
-import { Notifications } from "./organisms/Notifications";
-import { ConfigureLights } from "./organisms/ConfigureLights/ConfigureLights";
-import { initializeAuth } from "./atoms/auth";
-import { store } from "./atoms/store";
+import styles from "./App.module.css";
+import { Dashboard } from "../Dashboard";
+import { UpdateProfile } from "../UpdateProfile";
+import { Signup } from "../Signup";
+import { Login } from "../Login";
+import { ForgotPassword } from "../ForgotPassword";
+import { RequireAuth } from "../../atoms/RequireAuth";
+import { Notifications } from "../Notifications";
+import { ConfigureLights } from "../ConfigureLights/ConfigureLights";
+import { initializeAuth } from "../../atoms/auth";
+import { store } from "../../atoms/store";
 
 function App() {
   useEffect(() => {
@@ -18,11 +19,8 @@ function App() {
   }, []);
 
   return (
-    <Container
-      className="d-flex align-items-center justify-content-center"
-      style={{ minHeight: "100vh" }}
-    >
-      <div className="w-100 my-3" style={{ maxWidth: "400px" }}>
+    <Container className="d-flex align-items-center justify-content-center">
+      <div className={"my-3 " + styles.app}>
         <Router>
           <Routes>
             <Route path="/signup" element={<Signup />} />
@@ -48,7 +46,7 @@ function App() {
               path="/configure-lights"
               element={
                 <RequireAuth>
-                    <ConfigureLights />
+                  <ConfigureLights />
                 </RequireAuth>
               }
             ></Route>
